@@ -1,0 +1,115 @@
+# ═══════════════════════════════════════════════════════════════════
+# PowerSync Sync Streams — App de Aire Acondicionado (Fase 8)
+# ═══════════════════════════════════════════════════════════════════
+# QUÉ ES: define qué subconjunto de datos de Supabase Postgres se sincroniza
+# al SQLite local de cada técnico. Es la contracara offline del RLS.
+#
+# REGLA DE SEGURIDAD (punto 25 del checklist, skill offline-powersync):
+# estas queries deben replicar EXACTAMENTE el scope que las políticas RLS ya
+# aplican al técnico: sus turnos (vía appointment_technicians), los clientes /
+# equipos relacionados a esos turnos, y las órdenes que él mismo creó.
+# RLS protege el acceso online; esto decide qué se descarga al celular. Si no
+# coinciden, el técnico termina con datos de otro técnico u otra empresa.
+#
+# CÓMO DESPLEGAR (PowerSync Cloud):
+#   1. Dashboard → tu proyecto → instancia → pestaña "Sync Streams".
+#   2. Pegar este YAML y click en Deploy (valida la sintaxis).
+#   Alternativa con CLI: `powersync deploy ./powersync/sync-streams.yaml`
+#   (requiere login con tu cuenta de PowerSync Cloud).
+#
+# PRERREQUISITO EN POWER SYNC CLOUD (hacerlo ANTES de probar):
+#   - La conexión a Supabase debe estar activa con las credenciales VIGENTES
+#     (service_role + db password). Si rotaste claves, actualizalas en el
+#     dashboard o la replicación queda cortada.
+#   - Auth: la instancia debe verificar JWTs de Supabase (Supabase Auth).
+#     `auth.user_id()` = `sub` del JWT = auth.users.id (coincide con
+#     memberships.user_id y work_orders.created_by).
+#
+# NOTAS DE FORMATO (Sync Streams, edition 3):
+# - Identificadores en minúsculas; la PK sincronizada debe llamarse `id`
+#   (todas nuestras tablas la tienen como UUID → viaja como texto).
+# - Se permiten subqueries e INNER JOIN; NO se permiten GROUP BY / ORDER BY /
+#   LIMIT en las queries de streams.
+# - Columnas explícitas (no SELECT *) para que coincidan 1:1 con el AppSchema
+#   local (src/lib/powersync/schema.ts).
+# - is_primary (boolean en Postgres) viaja como entero; el AppSchema lo declara
+#   column.integer. warranty_days (integer) igual. quantity/unit_cost/subtotal
+#   (numeric) viajan como real. measurements (jsonb) viaja como texto (el
+#   cliente lo parsea con JSON.parse).
+# ═══════════════════════════════════════════════════════════════════
+
+config:
+  edition: 3
+
+streams:
+  # Turnos asignados al técnico (vía la tabla N:N; no se sincroniza la tabla
+  # de join en sí porque tiene PK compuesta y PowerSync exige PK `id`).
+  my_appointments:
+    auto_subscribe: true
+    query: |
+      SELECT a.id, a.company_id, a.client_id, a.equipment_id, a.scheduled_at, a.status, a.notes, a.created_at
+      FROM appointments a
+      INNER JOIN appointment_technicians at ON at.appointment_id = a.id
+      WHERE at.technician_id = auth.user_id()
+
+  # Clientes de esos turnos.
+  my_clients:
+    auto_subscribe: true
+    query: |
+      SELECT c.id, c.company_id, c.name FROM clients c
+      WHERE c.id IN (
+        SELECT a.client_id FROM appointments a
+        INNER JOIN appointment_technicians at ON at.appointment_id = a.id
+        WHERE at.technician_id = auth.user_id()
+      )
+
+  # Direcciones de esos clientes.
+  my_addresses:
+    auto_subscribe: true
+    query: |
+      SELECT ca.id, ca.client_id, ca.label, ca.address, ca.is_primary
+      FROM client_addresses ca
+      WHERE ca.client_id IN (
+        SELECT a.client_id FROM appointments a
+        INNER JOIN appointment_technicians at ON at.appointment_id = a.id
+        WHERE at.technician_id = auth.user_id()
+      )
+
+  # Equipos de esos turnos.
+  my_equipment:
+    auto_subscribe: true
+    query: |
+      SELECT e.id, e.company_id, e.client_id, e.address_id, e.equipment_type, e.brand, e.model, e.serial_number, e.qr_token, e.location_label
+      FROM equipment e
+      WHERE e.id IN (
+        SELECT a.equipment_id FROM appointments a
+        INNER JOIN appointment_technicians at ON at.appointment_id = a.id
+        WHERE at.technician_id = auth.user_id()
+      )
+
+  # Órdenes creadas por el propio técnico (único creador por OT: no hay
+  # conflictos reales; ver skill offline-powersync).
+  my_work_orders:
+    auto_subscribe: true
+    query: |
+      SELECT id, company_id, equipment_id, created_by, visit_type, diagnosis_notes, measurements, fault_found, actual_start_at, actual_end_at, signature_image, status, warranty_days, warranty_until, created_at
+      FROM work_orders
+      WHERE created_by = auth.user_id()
+
+  my_work_order_materials:
+    auto_subscribe: true
+    query: |
+      SELECT m.id, m.work_order_id, m.description, m.quantity, m.unit_cost, m.subtotal
+      FROM work_order_materials m
+      WHERE m.work_order_id IN (
+        SELECT id FROM work_orders WHERE created_by = auth.user_id()
+      )
+
+  my_work_order_photos:
+    auto_subscribe: true
+    query: |
+      SELECT p.id, p.work_order_id, p.storage_path, p.photo_type
+      FROM work_order_photos p
+      WHERE p.work_order_id IN (
+        SELECT id FROM work_orders WHERE created_by = auth.user_id()
+      )

@@ -1,0 +1,49 @@
+# ── Dependencies ──
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+
+# ── Next.js ──
+/.next/
+/out/
+/build
+
+# ── Misc ──
+.DS_Store
+*.pem
+*.log
+
+# ── Environment variables (SECURITY: nunca commitear secretos) ──
+# Solo .env.example se versiona; todos los demás .env* están excluidos.
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# ── Debug / logs ──
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Vercel ──
+.vercel
+
+# ── Supabase CLI (secrets locales) ──
+supabase/.temp
+supabase/.branches
+supabase/.env.local
+
+# ── TypeScript ──
+*.tsbuildinfo
+next-env.d.ts
+
+# ── PowerSync / SQLite local de desarrollo ──
+*.db
+*.db-shm
+*.db-wal
+
+# ── PowerSync worker assets (generados por postinstall) ──
+public/@powersync/*
