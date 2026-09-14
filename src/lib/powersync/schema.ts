@@ -16,6 +16,7 @@ export const AppSchema = new Schema({
   appointments: new Table({
     id: column.text,
     company_id: column.text,
+    branch_id: column.text,
     client_id: column.text,
     equipment_id: column.text,
     scheduled_at: column.text,
@@ -56,12 +57,14 @@ export const AppSchema = new Schema({
     diagnosis_notes: column.text,
     measurements: column.text,
     fault_found: column.text,
+    fault_type_id: column.text,
     actual_start_at: column.text,
     actual_end_at: column.text,
     signature_image: column.text,
     status: column.text,
     warranty_days: column.integer,
     warranty_until: column.text,
+    doc_number: column.integer,
     created_at: column.text,
   }),
   work_order_materials: new Table({

@@ -254,6 +254,35 @@ scope de RLS: turnos del técnico (JOIN a `appointment_technicians` por
 `auth.user_id()`), clientes/equipos relacionados y OTs creadas por él. Columnas
 explícitas 1:1 con el AppSchema.
 
+## Fase 1b–1f — Fundaciones V1.1 (multisucursal, fallas, config, números, notifs)
+
+### D29. Sucursales: un usuario → una sucursal, aislamiento sigue por empresa
+`branches` (0023) + `branch_users` con `UNIQUE(user_id)`. RLS sigue aislando
+solo por `company_id` (decisión D9 intacta); la sucursal es dato operativo
+(`appointments.branch_id` ahora con FK real, nullable) y el scope
+"técnico ve su sucursal" se aplica en capa de aplicación, igual que el scope
+por técnico de D22.
+
+### D30. "Misma falla" = `fault_type_id`, no texto libre
+`fault_types` por empresa + seed de 8 tipos comunes (0024/0025).
+`work_orders.fault_type_id` (nullable) es el campo comparable para la alerta
+de reingreso; `fault_found` (texto) queda como detalle. `maintenance_records`
+también lleva `fault_type_id` para el historial.
+
+### D31. Config + numeración humana por empresa
+`company_settings` 1:1 (timezone default America/Argentina/Buenos_Aires,
+currency ARS, `tax_mode` documentado como importes internos sin cálculo
+fiscal, `default_warranty_days` 90) + `document_counters` con
+`next_document_number()` (lock de fila, seguro ante concurrencia).
+`doc_number` en pedidos/presupuestos/OT/pagos con backfill ordenado por
+`created_at` y unique `(company_id, doc_number)`.
+
+### D32. Notificaciones con rol objetivo + `job_runs` para cron
+`notifications.target_role` (null = todos) refuerza en RLS la matriz de
+eventos (turno_mañana→todos, pagos/garantía/QR→owner+admin,
+turno_asignado→technician puntual). `job_runs(job_name, run_key)` únicos dan
+idempotencia y observabilidad mínima a los futuros cron de Vercel.
+
 ### Pendientes del lado de PowerSync Cloud (los hace el usuario)
 1. Actualizar la conexión a Supabase con las credenciales rotadas
    (service_role + db password) o la replicación queda cortada.

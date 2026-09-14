@@ -2,9 +2,8 @@
 -- appointments + appointment_technicians (N:N, varios técnicos por turno)
 -- + RLS + permisos.
 
--- NOTA: appointments.branch_id es una columna reservada (nullable, sin FK): el
--- plan la menciona pero V1 no define una tabla de sucursales/branches. Queda
--- para uso futuro.
+-- NOTA: appointments.branch_id ahora tiene una FK real hacia branches.
+-- La column se mantiene nullable para facilitar la migración incremental.
 
 create table public.appointments (
   id uuid primary key default gen_random_uuid(),

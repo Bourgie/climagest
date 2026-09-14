@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { PowerSyncProvider } from "@/lib/powersync/PowerSyncProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,19 +14,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Gestión de Aire Acondicionado",
-  description:
-    "SaaS multiempresa para empresas de instalación y reparación de aire acondicionado",
+  description: "SaaS multiempresa para empresas de instalación y reparación de aire acondicionado",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
-        <PowerSyncProvider>{children}</PowerSyncProvider>
-      </body>
+    <html lang="es" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }

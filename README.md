@@ -1,41 +1,96 @@
-# Agentes y Skills para OpenCode — App de Gestión para Empresas de Aire Acondicionado
+# ClimaGest — SaaS multiempresa para empresas de aire acondicionado
 
-Este paquete complementa el **Plan_Completo_V1_AireAcondicionado.pdf**. Define subagentes y skills que OpenCode puede usar automáticamente (o invocarse con `@nombre`) durante el desarrollo del proyecto.
+Gestión de clientes, equipos (QR), pedidos → presupuestos → agenda → órdenes
+de trabajo, cuenta corriente y garantías. Offline-first para el técnico
+(PowerSync), login de 3 factores (código de empresa + usuario + contraseña).
 
-## Instalación
+Fuente de verdad funcional: `Plan_Completo_V1_AireAcondicionado.pdf`.
+Decisiones tomadas durante el desarrollo: `docs/decisiones-arquitectura.md`.
 
-1. Copiá la carpeta `.opencode/` completa a la raíz del repositorio del proyecto (mismo nivel que `package.json`).
-2. OpenCode detecta automáticamente los agentes y skills al abrir el proyecto.
-3. Verificá con `opencode agent list` dentro de una sesión.
+## Stack
 
-## Agentes (`.opencode/agent/`)
+Next.js 16 + TypeScript + Tailwind · Supabase (Postgres 17 + Auth + Storage) ·
+PowerSync (offline) · pdfkit + qrcode · zod · vitest.
 
-| Agente | Cuándo se usa |
-|---|---|
-| `rls-auditor` | Después de crear/modificar tablas, políticas RLS, server actions, o el endpoint del QR público. Solo lectura. |
-| `db-schema-reviewer` | Antes de aplicar una migración nueva o modificar una tabla existente. Solo lectura. |
-| `code-reviewer` | Al cerrar una fase, revisión general de calidad de código. Solo lectura. |
-| `qa-tester` | Al cerrar cada fase, verifica cobertura de tests (aislamiento, permisos granulares, flujo operativo, QR, offline). Puede escribir tests. |
-| `security-checklist` | Antes de cualquier deploy a producción. Corre los 25 puntos del skill `checklist-seguridad`. Solo lectura. |
+Dos capas de seguridad: **RLS** (solo aislamiento por `company_id`) +
+**Server Actions** (permisos granulares de negocio contra `role_permissions`).
 
-Invocación manual: `@rls-auditor`, `@db-schema-reviewer`, `@code-reviewer`, `@qa-tester`, `@security-checklist`.
+## Estado (verificado 2026-09-14)
 
-## Skills (`.opencode/skills/`)
+| Fase | Alcance | Estado |
+|---|---|---|
+| 0 | Foundation (Next, Supabase, PowerSync esqueleto) | ✅ |
+| 1 | Plataforma y tenancy (empresas, roles, permisos) | ✅ |
+| 2 | Administración (usuarios, reseteo, módulos, auditoría) | ✅ |
+| 3 | Clientes (N direcciones, N contactos) | ✅ |
+| 4 | Equipos + QR público (whitelist) / privado | ✅ |
+| 5 | Pedidos + presupuestos + aceptación por link + PDF | ✅ |
+| 6 | Agenda (turnos multi-técnico) | ✅ |
+| 7 | Órdenes de trabajo (materiales, fotos, firma, horas) | ✅ |
+| 8 | Offline PowerSync (AppSchema + upload + Sync Streams) | ✅ código, ⏳ falta deploy en PowerSync Cloud |
+| 9 | Cuenta corriente (cargos, pagos, aplicación, PDF/Excel) | ✅ |
+| 10 | Garantías (`warranty_days` → `warranty_until`) | ✅ parcial |
+| 1b–1f | Fundaciones V1.1: sucursales, `fault_types`, mantenimiento, `company_settings`, numeración humana, notificaciones, `job_runs` | ✅ migraciones aplicadas |
 
-| Skill | Contenido |
-|---|---|
-| `flujo-orden-trabajo` | Máquina de estados Pedido→Presupuesto→Turno→Orden de Trabajo→Cobro, incluida garantía y horas reales. |
-| `permisos-granulares` | Sistema de permisos configurables por el Dueño (role_permissions), separado de RLS. |
-| `offline-powersync` | Arquitectura offline-first del flujo del técnico, Sync Rules de PowerSync, alcance acotado. |
-| `qr-equipo-seguridad` | Whitelist de la vista pública del QR, consultas externas, auditoría de accesos. |
-| `cuenta-corriente-garantias` | Cargos, pagos con aplicación manual, recargo por mora opcional, garantías por trabajo. |
-| `gestion-usuarios-auth` | Login de 3 factores (código de empresa + usuario + contraseña) sobre email sintético de Supabase Auth, jerarquía de reseteo. |
-| `dashboard-rendimiento` | Métricas del panel del Dueño, cálculo de horas trabajadas por técnico, principios mobile-first. |
-| `checklist-seguridad` | Los 25 puntos de seguridad (22 generales + 3 específicos del proyecto). |
+Tests: 57 integración + 13 unitarios. Migraciones: `0001–0027` aplicadas
+(falta la `0019`, que nunca existió — hueco histórico sin efecto).
 
-## Notas
+## Puesta en marcha
 
-- Estos archivos reflejan el estado del **Plan Completo V1** consolidado (multiempresa modular, permisos granulares configurables desde V1, offline-first con PowerSync, flujo Pedido→Presupuesto→Turno→Orden de Trabajo, QR con vista pública/privada, WhatsApp por enlace, cuenta corriente con aplicación manual de pagos, garantías con alerta de reingreso).
-- Si el plan cambia, actualizá el skill correspondiente — son la fuente de verdad operativa que OpenCode va a seguir.
-- Los agentes `rls-auditor`, `db-schema-reviewer` y `security-checklist` tienen `permission.edit: deny` a propósito: son revisores, no ejecutores.
-- Este proyecto reutiliza el mismo patrón de agentes que el proyecto de "Seguimiento Comercial", adaptado a un dominio distinto — si trabajás ambos proyectos en paralelo, no mezcles las carpetas `.opencode/` de uno y otro, cada repo tiene la suya propia.
+```bash
+npm install
+# .env.local con NEXT_PUBLIC_SUPABASE_URL, claves anon/service_role,
+# SUPABASE_DB_URL (pooler IPv4, usuario postgres.<ref>, puerto 6543),
+# NEXT_PUBLIC_POWER_SYNC_URL y NEXT_PUBLIC_APP_URL (.env.example de referencia)
+
+node --env-file=.env.local scripts/apply-pending-migrations.mjs  # solo pendientes
+node --env-file=.env.local scripts/seed-dev.mjs                  # seed SOLO dev
+npm run dev
+```
+
+Las migraciones se aplican directo a Postgres con `--db-url` (`supabase link`
+está roto con el formato nuevo de tokens — ver D5). El script
+`apply-pending-migrations.mjs` hace lo mismo sin el CLI y registra en
+`supabase_migrations.schema_migrations`.
+
+## Accesos (tras el seed dev)
+
+| Quién | Dónde | Credenciales default |
+|---|---|---|
+| Superusuario | `/superadmin/login` | `superadmin@internal.app` / `SuperAdmin123!` (o `SEED_SUPERUSER_PASSWORD`) |
+| Dueño demo | `/login`, empresa `DEMO`, usuario `demo` | `Demo1234!` (o `SEED_DEMO_PASSWORD`) |
+| Admin demo | idem, usuario `admin` | idem |
+| Técnico demo | idem, usuario `tecnico` | idem |
+
+El Superusuario crea empresas desde `/superadmin` (activa módulos por plan:
+básico/profesional/premium). Cada empresa nueva recibe `company_settings`,
+contadores de documentos y tipos de falla por defecto.
+
+## Estructura
+
+- `src/app/` — rutas (empresa) + `/superadmin` (plataforma) + `/api` (PDFs, upload PowerSync)
+- `src/server/services/` — lógica de negocio pura (testeable, recibe admin client)
+- `src/server/actions/` — wrappers finos: auth + permiso + servicio + revalidate
+- `supabase/migrations/` — `0001–0027`, solo aislamiento en RLS
+- `powersync/sync-streams.yaml` — 7 streams (pendiente pegar en PowerSync Cloud)
+- `scripts/` — `seed-dev.mjs`, `apply-pending-migrations.mjs`
+- `tests/` — integración + unitarios (`npm run test:integration`)
+
+## Pendientes conocidos
+
+1. **PowerSync Cloud**: actualizar conexión (service_role + db password rotadas) y
+   pegar `powersync/sync-streams.yaml`; prueba de campo con 3 técnicos (D28).
+2. Fase 10: alerta de garantía vigente al crear pedido + cargo automático al
+   cerrar OT.
+3. Cablear fundaciones 1b–1f en UI/servicios (sucursal en alta de usuarios,
+   `doc_number` al crear documentos, campana de notificaciones, cron de
+   recordatorios).
+
+## Agentes y skills (OpenCode)
+
+En `.opencode/`: `rls-auditor`, `db-schema-reviewer`, `code-reviewer`,
+`qa-tester`, `security-checklist` (los tres primeros solo lectura) y skills
+`flujo-orden-trabajo`, `permisos-granulares`, `offline-powersync`,
+`qr-equipo-seguridad`, `cuenta-corriente-garantias`, `gestion-usuarios-auth`,
+`dashboard-rendimiento`, `checklist-seguridad`. Son la fuente operativa que
+OpenCode sigue; si el plan cambia, actualizar el skill correspondiente.

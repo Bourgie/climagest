@@ -1,0 +1,47 @@
+name: Daily DB Backup to Cloudflare R2
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # 03:00 UTC daily
+  workflow_dispatch: {}  # manual trigger
+
+env:
+  SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+  R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+  R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+  R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+  R2_BUCKET: ${{ secrets.R2_BUCKET }}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pg_dump (postgresql-client-17) + awscli
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17 awscli
+
+      - name: Dump database and upload to R2
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          FILE="backup-$(date +%F).sql.gz"
+          echo "Dumping database to $FILE..."
+          pg_dump \
+            -h aws-0-sa-east-1.pooler.supabase.com \
+            -p 6543 \
+            -U postgres.jnbcnhdalkbazoapatoo \
+            -d postgres \
+            --no-owner --no-acl \
+            | gzip > "$FILE"
+
+          echo "Uploading to R2..."
+          aws s3 cp "$FILE" "s3://${R2_BUCKET}/climagest/$FILE" \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+      - name: Cleanup
+        run: rm -f backup-*.sql.gz

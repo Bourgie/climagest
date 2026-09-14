@@ -47,19 +47,19 @@ streams:
   my_appointments:
     auto_subscribe: true
     query: |
-      SELECT a.id, a.company_id, a.client_id, a.equipment_id, a.scheduled_at, a.status, a.notes, a.created_at
-      FROM appointments a
-      INNER JOIN appointment_technicians at ON at.appointment_id = a.id
+      SELECT appointments.id, appointments.company_id, appointments.branch_id, appointments.client_id, appointments.equipment_id, appointments.scheduled_at, appointments.status, appointments.notes, appointments.created_at
+      FROM appointments
+      INNER JOIN appointment_technicians at ON at.appointment_id = appointments.id
       WHERE at.technician_id = auth.user_id()
 
   # Clientes de esos turnos.
   my_clients:
     auto_subscribe: true
     query: |
-      SELECT c.id, c.company_id, c.name FROM clients c
-      WHERE c.id IN (
-        SELECT a.client_id FROM appointments a
-        INNER JOIN appointment_technicians at ON at.appointment_id = a.id
+      SELECT clients.id, clients.company_id, clients.name FROM clients
+      WHERE clients.id IN (
+        SELECT appointments.client_id FROM appointments
+        INNER JOIN appointment_technicians at ON at.appointment_id = appointments.id
         WHERE at.technician_id = auth.user_id()
       )
 
@@ -67,11 +67,11 @@ streams:
   my_addresses:
     auto_subscribe: true
     query: |
-      SELECT ca.id, ca.client_id, ca.label, ca.address, ca.is_primary
-      FROM client_addresses ca
-      WHERE ca.client_id IN (
-        SELECT a.client_id FROM appointments a
-        INNER JOIN appointment_technicians at ON at.appointment_id = a.id
+      SELECT client_addresses.id, client_addresses.client_id, client_addresses.label, client_addresses.address, client_addresses.is_primary
+      FROM client_addresses
+      WHERE client_addresses.client_id IN (
+        SELECT appointments.client_id FROM appointments
+        INNER JOIN appointment_technicians at ON at.appointment_id = appointments.id
         WHERE at.technician_id = auth.user_id()
       )
 
@@ -79,11 +79,11 @@ streams:
   my_equipment:
     auto_subscribe: true
     query: |
-      SELECT e.id, e.company_id, e.client_id, e.address_id, e.equipment_type, e.brand, e.model, e.serial_number, e.qr_token, e.location_label
-      FROM equipment e
-      WHERE e.id IN (
-        SELECT a.equipment_id FROM appointments a
-        INNER JOIN appointment_technicians at ON at.appointment_id = a.id
+      SELECT equipment.id, equipment.company_id, equipment.client_id, equipment.address_id, equipment.equipment_type, equipment.brand, equipment.model, equipment.serial_number, equipment.qr_token, equipment.location_label
+      FROM equipment
+      WHERE equipment.id IN (
+        SELECT appointments.equipment_id FROM appointments
+        INNER JOIN appointment_technicians at ON at.appointment_id = appointments.id
         WHERE at.technician_id = auth.user_id()
       )
 
@@ -92,7 +92,7 @@ streams:
   my_work_orders:
     auto_subscribe: true
     query: |
-      SELECT id, company_id, equipment_id, created_by, visit_type, diagnosis_notes, measurements, fault_found, actual_start_at, actual_end_at, signature_image, status, warranty_days, warranty_until, created_at
+      SELECT id, company_id, equipment_id, created_by, visit_type, diagnosis_notes, measurements, fault_found, fault_type_id, actual_start_at, actual_end_at, signature_image, status, warranty_days, warranty_until, doc_number, created_at
       FROM work_orders
       WHERE created_by = auth.user_id()
 
