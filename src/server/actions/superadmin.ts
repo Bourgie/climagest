@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { MODULES } from "@/lib/modules";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -10,6 +11,8 @@ import {
   resetOwnerPassword,
   updateCompanyModules,
   updateCompanyStatus,
+  deleteCompany,
+  updateCompany,
 } from "@/server/services/superadmin";
 
 export type SuperadminActionState = {
@@ -26,6 +29,13 @@ const createCompanySchema = z.object({
   ownerFullName: z.string().trim().min(1, "Nombre del Dueño requerido"),
   ownerUsername: z.string().trim().min(1, "Usuario del Dueño requerido"),
   ownerPassword: z.string().min(8, "Contraseña del Dueño: mínimo 8 caracteres"),
+});
+
+const updateCompanySchema = z.object({
+  name: z.string().trim().min(1, "Nombre requerido"),
+  companyCode: z.string().trim().min(1, "Código requerido"),
+  status: z.string(),
+  plan: z.string(),
 });
 
 export async function createCompanyAction(
@@ -71,7 +81,39 @@ export async function createCompanyAction(
 
   if (!result.ok) return { error: result.error };
   revalidatePath("/superadmin");
-  return { success: true, provisionalPassword: result.provisionalPassword };
+  redirect("/superadmin");
+}
+
+export async function updateCompanyAction(
+  _prev: SuperadminActionState,
+  formData: FormData,
+): Promise<SuperadminActionState> {
+  const user = await requireSuperuser();
+
+  const companyId = String(formData.get("companyId") ?? "");
+  if (!companyId) return { error: "ID de empresa requerido." };
+
+  const parsed = updateCompanySchema.safeParse({
+    name: formData.get("name"),
+    companyCode: formData.get("companyCode"),
+    status: formData.get("status"),
+    plan: formData.get("plan"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+
+  const admin = createAdminClient();
+  const result = await updateCompany({
+    admin,
+    actorUserId: user.id,
+    companyId,
+    input: parsed.data,
+  });
+
+  if (!result.ok) return { error: result.error };
+  revalidatePath("/superadmin");
+  redirect("/superadmin");
 }
 
 export async function updateCompanyStatusAction(
@@ -137,4 +179,24 @@ export async function resetOwnerPasswordAction(
   if (!result.ok) return { error: result.error };
   revalidatePath("/superadmin");
   return { success: true, provisionalPassword: result.provisionalPassword };
+}
+
+export async function deleteCompanyAction(
+  _prev: SuperadminActionState,
+  formData: FormData,
+): Promise<SuperadminActionState> {
+  const user = await requireSuperuser();
+  const companyId = String(formData.get("companyId") ?? "");
+  if (!companyId) return { error: "ID de empresa requerido." };
+
+  const admin = createAdminClient();
+  const result = await deleteCompany({
+    admin,
+    actorUserId: user.id,
+    companyId,
+  });
+
+  if (!result.ok) return { error: result.error };
+  revalidatePath("/superadmin");
+  redirect("/superadmin");
 }

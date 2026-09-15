@@ -41,7 +41,19 @@ export async function proxy(request: NextRequest) {
   );
 
   try {
-    await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_superuser, force_password_change')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (profile?.force_password_change && !request.nextUrl.pathname.startsWith('/cambiar-password')) {
+        return NextResponse.redirect(new URL('/cambiar-password', request.url));
+      }
+    }
   } catch {
     // No autorizamos acá (eso vive en server components/actions, Fase 1+);
     // solo refrescamos la sesión. Dejamos pasar la request si falla el refresh.

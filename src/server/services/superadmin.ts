@@ -209,4 +209,90 @@ export async function resetOwnerPassword(args: {
   return { ok: true, provisionalPassword: args.newPassword };
 }
 
+/** Actualiza datos básicos de una empresa (nombre, código, estado, plan). */
+export async function updateCompany(args: {
+  admin: SupabaseClient;
+  actorUserId: string;
+  companyId: string;
+  input: { name: string; companyCode: string; status: string; plan: string };
+}): Promise<ServiceResult> {
+  const { admin, actorUserId, companyId, input } = args;
+  const name = input.name.trim();
+  const companyCode = input.companyCode.trim().toUpperCase();
+
+  if (!name || !companyCode) {
+    return { ok: false, error: "Nombre y código de empresa son requeridos." };
+  }
+  if (!/^[A-Z0-9_-]+$/.test(companyCode)) {
+    return { ok: false, error: "Código inválido (mayúsculas, números o guion)." };
+  }
+  if (!STATUSES.includes(input.status)) return { ok: false, error: "Estado inválido." };
+  if (!PLANS.includes(input.plan)) return { ok: false, error: "Plan inválido." };
+
+  const { data: existing } = await admin
+    .from("companies")
+    .select("id")
+    .eq("company_code", companyCode)
+    .neq("id", companyId)
+    .maybeSingle();
+  if (existing) return { ok: false, error: "El código de empresa ya existe." };
+
+  const { data: prev } = await admin
+    .from("companies")
+    .select("name, company_code, status, plan")
+    .eq("id", companyId)
+    .maybeSingle();
+
+  const { error } = await admin
+    .from("companies")
+    .update({ name, company_code: companyCode, status: input.status, plan: input.plan })
+    .eq("id", companyId);
+  if (error) return { ok: false, error: "No se pudo actualizar la empresa." };
+
+  await writeAuditLog(admin, {
+    companyId,
+    userId: actorUserId,
+    action: "companies.update",
+    entityType: "companies",
+    entityId: companyId,
+    oldData: prev ?? undefined,
+    newData: { name, company_code: companyCode, status: input.status, plan: input.plan },
+  });
+  return { ok: true };
+}
+
+/** Elimina (soft delete) una empresa y sus datos relacionados. */
+export async function deleteCompany(args: {
+  admin: SupabaseClient;
+  actorUserId: string;
+  companyId: string;
+}): Promise<ServiceResult> {
+  const { admin, actorUserId, companyId } = args;
+
+  const { data: prev } = await admin
+    .from("companies")
+    .select("name, company_code, status, plan")
+    .eq("id", companyId)
+    .maybeSingle();
+  if (!prev) return { ok: false, error: "Empresa no encontrada." };
+
+  // Soft delete: cambiar status a 'blocked'
+  const { error } = await admin
+    .from("companies")
+    .update({ status: "blocked" })
+    .eq("id", companyId);
+  if (error) return { ok: false, error: "No se pudo bloquear la empresa." };
+
+  await writeAuditLog(admin, {
+    companyId,
+    userId: actorUserId,
+    action: "companies.delete",
+    entityType: "companies",
+    entityId: companyId,
+    oldData: prev,
+    newData: { status: "blocked" },
+  });
+  return { ok: true };
+}
+
 export type { ModuleKey };
