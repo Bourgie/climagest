@@ -71,9 +71,7 @@ export function SuperadminProfileForm({ userId }: Props) {
   );
 }
 
-function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-  // This is a placeholder - the actual handler is in the component
-}
+
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
