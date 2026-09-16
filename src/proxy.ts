@@ -9,7 +9,7 @@ const SECURITY_HEADERS = {
   "X-XSS-Protection": "1; mode=block",
   // Permitir unsafe-eval para Next.js (HMR, eval en runtime)
   // unsafe-inline necesario para scripts inline de Next.js
-  "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none';",
+  "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none';",
 };
 
 function addSecurityHeaders(response: NextResponse) {
