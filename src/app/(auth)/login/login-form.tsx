@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useEffect } from "react";
+import { useActionState, useRef } from "react";
 import { login, type LoginState } from "@/server/actions/auth";
 
 const initialState: LoginState = {};
@@ -8,11 +8,6 @@ const initialState: LoginState = {};
 export function LoginForm() {
   const [state, action, pending] = useActionState(login, initialState);
   const formRef = useRef<HTMLFormElement>(null);
-  const startTimeRef = useRef<number>(0);
-
-  useEffect(() => {
-    startTimeRef.current = Date.now();
-  }, []);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     // Honeypot check - if filled, it's likely a bot
@@ -24,16 +19,8 @@ export function LoginForm() {
       return;
     }
 
-    // Minimum time check (humans need ~2s to fill form)
-    const elapsed = Date.now() - startTimeRef.current;
-    if (elapsed < 1500) {
-      e.preventDefault();
-      // Could show a generic error or just delay
-      setTimeout(() => {
-        formRef.current?.requestSubmit();
-      }, 1500 - elapsed);
-      return;
-    }
+    e.preventDefault();
+    formRef.current?.submit();
   };
 
   return (
