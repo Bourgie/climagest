@@ -45,7 +45,7 @@ export function LoginForm() {
         id="website"
         tabIndex={-1}
         autoComplete="off"
-        style={{ display: "none", position: "absolute", left: "-9999px" }}
+        className="absolute left-[-9999px] top-[-9999px] opacity-0 pointer-events-none aria-hidden"
         aria-hidden="true"
       />
 
