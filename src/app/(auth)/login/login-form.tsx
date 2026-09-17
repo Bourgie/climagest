@@ -1,17 +1,16 @@
 "use client";
 
-import { useActionState, useRef } from "react";
-import { login, type LoginState } from "@/server/actions/auth";
+import { useActionState } from "react";
+import { login } from "@/server/actions/auth";
 
-const initialState: LoginState = {};
+const initialState = {} as { error?: string };
 
 export function LoginForm() {
   const [state, action, pending] = useActionState(login, initialState);
-  const formRef = useRef<HTMLFormElement>(null);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent) => {
     // Honeypot check - if filled, it's likely a bot
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
     const honeypot = formData.get("website") as string;
     if (honeypot && honeypot.length > 0) {
       e.preventDefault();
@@ -20,16 +19,14 @@ export function LoginForm() {
     }
 
     e.preventDefault();
-    formRef.current?.submit();
   };
 
   return (
-    <form ref={formRef} action={action} className="flex w-full max-w-sm flex-col gap-4" onSubmit={handleSubmit}>
+    <form action={action} className="flex w-full max-w-sm flex-col gap-4" onSubmit={handleSubmit}>
       {/* Honeypot field - hidden from humans, visible to bots */}
       <input
         type="text"
         name="website"
-        id="website"
         tabIndex={-1}
         autoComplete="off"
         className="absolute left-[-9999px] top-[-9999px] opacity-0 pointer-events-none aria-hidden"
@@ -79,7 +76,7 @@ export function LoginForm() {
         />
       </div>
 
-      {state?.error && (
+      {state.error && (
         <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p>
       )}
 
