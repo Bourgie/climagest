@@ -19,23 +19,23 @@ interface DashboardFiltersProps {
 
 export function DashboardFilters({ period, from, to, technicianId, branchId, techList, branchList, setPeriod, setFrom, setTo, setTechnicianId, setBranchId }: DashboardFiltersProps) {
   // Stable onChange handlers via useRef - don't change between renders
-  const onPeriodChange = useRef((e) => {
+  const onPeriodChange = useRef<(e: React.ChangeEvent<HTMLSelectElement>) => void>((e) => {
     setPeriod(e.target.value);
   }).current;
 
-  const onFromChange = useRef((e) => {
+  const onFromChange = useRef<(e: React.ChangeEvent<HTMLInputElement>) => void>((e) => {
     setFrom(e.target.value);
   }).current;
 
-  const onToChange = useRef((e) => {
+  const onToChange = useRef<(e: React.ChangeEvent<HTMLInputElement>) => void>((e) => {
     setTo(e.target.value);
   }).current;
 
-  const onTechnicianIdChange = useRef((e) => {
+  const onTechnicianIdChange = useRef<(e: React.ChangeEvent<HTMLSelectElement>) => void>((e) => {
     setTechnicianId(e.target.value);
   }).current;
 
-  const onBranchIdChange = useRef((e) => {
+  const onBranchIdChange = useRef<(e: React.ChangeEvent<HTMLSelectElement>) => void>((e) => {
     setBranchId(e.target.value);
   }).current;
 
