@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { MODULES, MODULE_PRESETS, PLANS, type ModuleKey, type Plan } from "@/lib/modules";
 import { createCompanyAction, type SuperadminActionState } from "@/server/actions/superadmin";
 
@@ -13,19 +13,19 @@ export function CreateCompanyForm() {
   );
   const [state, action, pending] = useActionState(createCompanyAction, initialState);
 
-  function changePlan(next: Plan) {
+  // Stable function references via useRef - functions don't change between renders
+  const changePlanRef = useRef((next: Plan) => {
     setPlan(next);
     setModules(new Set<string>(MODULE_PRESETS[next]));
-  }
-
-  function toggle(key: ModuleKey) {
+  });
+  const toggleRef = useRef((key: ModuleKey) => {
     setModules((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
       return next;
     });
-  }
+  });
 
   return (
     <form action={action} className="flex flex-col gap-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
@@ -51,7 +51,7 @@ export function CreateCompanyForm() {
             name="plan"
             className="input"
             value={plan}
-            onChange={(e) => changePlan(e.target.value as Plan)}
+            onChange={(e) => changePlanRef.current(e.target.value as Plan)}
           >
             {PLANS.map((p) => (
               <option key={p} value={p}>
@@ -79,7 +79,7 @@ export function CreateCompanyForm() {
               <input
                 type="checkbox"
                 checked={modules.has(m.key)}
-                onChange={() => toggle(m.key)}
+                onChange={() => toggleRef.current(m.key)}
               />
               {m.label}
             </label>
