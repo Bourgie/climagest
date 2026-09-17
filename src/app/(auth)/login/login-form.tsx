@@ -18,7 +18,7 @@ export function LoginForm() {
       return;
     }
 
-    e.preventDefault();
+    // Let the form submit normally (action will be called by Next.js)
   };
 
   return (
@@ -58,7 +58,7 @@ export function LoginForm() {
           type="text"
           autoComplete="username"
           required
-          className="rounded-md border border-zinc-300 px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-700"
+          className="rounded-md border border-zinc-300 px-3 py-2 text-base dark-border-zinc-700 dark:bg-zinc-700"
         />
       </div>
 
@@ -72,7 +72,7 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
-          className="rounded-md border border-zinc-300 px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
+          className="rounded-md border border-zinc-300 px-3 py-2 text-base dark.border-zinc-700 dark:bg-zinc-900"
         />
       </div>
 
