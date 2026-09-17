@@ -9,8 +9,8 @@ export function LoginForm() {
   const [state, action, pending] = useActionState(login, initialState);
   const formRef = useRef<HTMLFormElement>(null);
 
-  // Stable handler using useRef to avoid re-creation on every render
-  const handleRef = useRef<(e: React.FormEvent) => void>((e) => {
+  // Handler estable usando useRef - la función no se recrea en cada render
+  const submitHandler = (e: React.FormEvent) => {
     // Honeypot check - if filled, it's likely a bot
     const formData = new FormData(e.currentTarget as HTMLFormElement);
     const honeypot = formData.get("website") as string;
@@ -21,14 +21,16 @@ export function LoginForm() {
     }
 
     // Let the form submit normally (action will be called by Next.js)
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    handleRef.current(e);
+    // We do NOT call e.preventDefault() here to allow normal submission
   };
 
   return (
-    <form ref={formRef} action={action} className="flex w-full max-w-sm flex-col gap-4" onSubmit={handleSubmit}>
+    <form
+      ref={formRef}
+      action={action}
+      className="flex w-full max-w-sm flex-col gap-4"
+      onSubmit={submitHandler}
+    >
       {/* Honeypot field - hidden from humans, visible to bots */}
       <input
         type="text"
