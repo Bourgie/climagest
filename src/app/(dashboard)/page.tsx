@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LogoutButton } from "@/app/logout-button";
 import { Calendar, Filter, ChevronDown } from "lucide-react";
+import { DashboardFilters } from "@/app/dashboard-filters";
 
 type Period = "today" | "week" | "month" | "custom";
 type Filters = {
