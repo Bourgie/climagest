@@ -1,14 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef } from "react";
 import { login } from "@/server/actions/auth";
 
 const initialState = {} as { error?: string };
 
 export function LoginForm() {
   const [state, action, pending] = useActionState(login, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Stable handler using useRef to avoid re-creation on every render
+  const handleRef = useRef<(e: React.FormEvent) => void>((e) => {
     // Honeypot check - if filled, it's likely a bot
     const formData = new FormData(e.currentTarget as HTMLFormElement);
     const honeypot = formData.get("website") as string;
@@ -19,10 +21,14 @@ export function LoginForm() {
     }
 
     // Let the form submit normally (action will be called by Next.js)
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    handleRef.current(e);
   };
 
   return (
-    <form action={action} className="flex w-full max-w-sm flex-col gap-4" onSubmit={handleSubmit}>
+    <form ref={formRef} action={action} className="flex w-full max-w-sm flex-col gap-4" onSubmit={handleSubmit}>
       {/* Honeypot field - hidden from humans, visible to bots */}
       <input
         type="text"
@@ -44,7 +50,7 @@ export function LoginForm() {
           autoCapitalize="characters"
           autoComplete="off"
           required
-          className="rounded-md border border-zinc-300 px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
+          className="rounded-md border border-zinc-300 px-3 py-2 text-base dark.border-zinc-700 dark:bg-zinc-900"
         />
       </div>
 
@@ -58,7 +64,7 @@ export function LoginForm() {
           type="text"
           autoComplete="username"
           required
-          className="rounded-md border border-zinc-300 px-3 py-2 text-base dark-border-zinc-700 dark:bg-zinc-700"
+          className="rounded-md border border-zinc-300 px-3 py-2 text-base dark.border-zinc-700 dark:bg-zinc-700"
         />
       </div>
 
