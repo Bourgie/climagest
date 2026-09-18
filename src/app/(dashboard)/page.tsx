@@ -3,17 +3,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LogoutButton } from "@/app/logout-button";
-import { Calendar, Filter, ChevronDown } from "lucide-react";
 import { DashboardFilters } from "@/app/dashboard-filters";
 
 type Period = "today" | "week" | "month" | "custom";
-type Filters = {
-  period: Period;
-  from?: string;
-  to?: string;
-  technicianId?: string;
-  branchId?: string;
-};
 
 function getPeriodRange(period: Period, tz: string, customFrom?: string, customTo?: string): { from: string; to: string } {
   const now = new Date();
@@ -93,14 +85,6 @@ export default async function Home({
   const canViewRequests = await hasPermission(user, "service_requests.view");
   const canViewQuotes = await hasPermission(user, "quotes.view");
 
-  const baseUrl = new URL("/", "http://x");
-  baseUrl.searchParams.set("period", period);
-  if (from) baseUrl.searchParams.set("from", from);
-  if (to) baseUrl.searchParams.set("to", to);
-  if (technicianId) baseUrl.searchParams.set("technicianId", technicianId);
-  if (branchId) baseUrl.searchParams.set("branchId", branchId);
-  const currentPath = baseUrl.pathname + baseUrl.search;
-
   async function countAppointments() {
     if (!canViewAppointments) return { count: 0 };
     let q = admin.from("appointments").select("*", { count: "exact", head: true })
@@ -169,53 +153,16 @@ export default async function Home({
           </p>
         </div>
 
-<div className="flex flex-wrap gap-3">
-              <form action="/" method="get" className="flex flex-wrap gap-2 items-end" onSubmit={e => e.preventDefault()}>
-                <input type="hidden" name="period" value={period} />
-                {from && <input type="hidden" name="from" value={from} />}
-                {to && <input type="hidden" name="to" value={to} />}
-                {technicianId && <input type="hidden" name="technicianId" value={technicianId} />}
-                {branchId && <input type="hidden" name="branchId" value={branchId} />}
-
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-zinc-600 dark:text-zinc-400">Período</label>
-                  <select name="period" onChange={e => (e.target as HTMLSelectElement).form?.submit()} className="rounded-md border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900">
-                    <option value="today" selected={period === "today"}>Hoy</option>
-                    <option value="week" selected={period === "week"}>Esta semana</option>
-                    <option value="month" selected={period === "month"}>Este mes</option>
-                    <option value="custom" selected={period === "custom"}>Personalizado</option>
-                  </select>
-                </div>
-
-                {period === "custom" && (
-                  <>
-                    <label className="text-sm text-zinc-600 dark:text-zinc-400">Desde</label>
-                    <input type="date" name="from" value={from ?? ""} onChange={e => (e.target as HTMLInputElement).form?.submit()} className="rounded-md border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900" />
-                    <label className="text-sm text-zinc-600 dark:text-zinc-400">Hasta</label>
-                    <input type="date" name="to" value={to ?? ""} onChange={e => (e.target as HTMLInputElement).form?.submit()} className="rounded-md border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900" />
-                  </>
-                )}
-
-                {techList.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-zinc-600 dark:text-zinc-400">Técnico</label>
-                    <select name="technicianId" onChange={e => (e.target as HTMLSelectElement).form?.submit()} className="rounded-md border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900">
-                      <option value="">Todos</option>
-                      {techList.map(t => <option key={t.id} value={t.id} selected={technicianId === t.id}>{t.name}</option>)}
-                    </select>
-                  </div>
-                )}
-
-                {branchList.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-zinc-600 dark:text-zinc-400">Sucursal</label>
-                    <select name="branchId" onChange={e => (e.target as HTMLSelectElement).form?.submit()} className="rounded-md border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900">
-                      <option value="">Todas</option>
-                      {branchList.map(b => <option key={b.id} value={b.id} selected={branchId === b.id}>{b.name}</option>)}
-                    </select>
-                  </div>
-                )}
-          </form>
+        <div className="flex flex-wrap gap-3">
+          <DashboardFilters
+            period={period}
+            from={from}
+            to={to}
+            technicianId={technicianId}
+            branchId={branchId}
+            techList={techList}
+            branchList={branchList}
+          />
         </div>
       </div>
 
